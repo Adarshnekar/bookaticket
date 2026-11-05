@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, Bell, User, Bus, Sparkles, X, CheckCircle, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, Bell, Bus, X, ShieldCheck } from 'lucide-react';
 
 export default function Navbar({ title, showBack = false }) {
   const navigate = useNavigate();
   const location = useLocation();
   const [showNotifications, setShowNotifications] = useState(false);
-  const [showProfile, setShowProfile] = useState(false);
 
   const notifications = [
     {
@@ -81,10 +80,7 @@ export default function Navbar({ title, showBack = false }) {
           {/* Notifications Button */}
           <div className="relative">
             <button
-              onClick={() => {
-                setShowNotifications(!showNotifications);
-                setShowProfile(false);
-              }}
+              onClick={() => setShowNotifications(!showNotifications)}
               className="p-2 rounded-full hover:bg-white/15 active:bg-white/25 transition-colors relative"
               aria-label="Notifications"
             >
@@ -122,55 +118,6 @@ export default function Navbar({ title, showBack = false }) {
                       <p className="text-slate-600 mt-1">{item.desc}</p>
                     </div>
                   ))}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* User Profile Button */}
-          <div className="relative">
-            <button
-              onClick={() => {
-                setShowProfile(!showProfile);
-                setShowNotifications(false);
-              }}
-              className="p-2 rounded-full hover:bg-white/15 active:bg-white/25 transition-colors"
-              aria-label="User Profile"
-            >
-              <div className="w-6 h-6 rounded-full bg-white/20 border border-white/40 flex items-center justify-center text-xs font-bold">
-                <User className="w-3.5 h-3.5" />
-              </div>
-            </button>
-
-            {/* Profile Dropdown */}
-            {showProfile && (
-              <div className="absolute right-0 mt-2 w-72 bg-white rounded-xl shadow-2xl border border-slate-100 text-slate-800 p-4 z-50 animate-in fade-in zoom-in-95 duration-150">
-                <div className="flex items-center gap-3 pb-3 border-b border-slate-100">
-                  <div className="w-10 h-10 rounded-full bg-[#C8102E] text-white flex items-center justify-center font-bold text-base">
-                    AR
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-sm text-slate-900">Arjun Rao</h4>
-                    <p className="text-xs text-slate-500">+91 98765 43210</p>
-                  </div>
-                </div>
-
-                <div className="mt-3 space-y-2 text-xs">
-                  <div className="flex items-center justify-between p-2 rounded-lg bg-emerald-50 text-emerald-800 font-medium">
-                    <span className="flex items-center gap-1.5">
-                      <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                      KYC Verified Commuter
-                    </span>
-                    <span className="text-[10px] bg-emerald-200/80 px-1.5 py-0.5 rounded text-emerald-900">Active</span>
-                  </div>
-                  <div className="flex items-center justify-between p-2 rounded-lg bg-slate-50 text-slate-700">
-                    <span>Namma Pass Wallet Balance</span>
-                    <span className="font-bold text-slate-900">₹340.00</span>
-                  </div>
-                  <div className="flex items-center justify-between p-2 rounded-lg bg-slate-50 text-slate-700">
-                    <span>Loyalty Commute Points</span>
-                    <span className="font-bold text-bmtc-red">120 Pts</span>
-                  </div>
                 </div>
               </div>
             )}

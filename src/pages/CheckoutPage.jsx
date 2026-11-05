@@ -88,7 +88,7 @@ export default function CheckoutPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F9F9FF] flex flex-col pb-28">
+    <div className="min-h-screen bg-[#F9F9FF] flex flex-col pb-36 sm:pb-28">
       {/* Top Header */}
       <Navbar title="Ticket Checkout" showBack={true} />
 

@@ -79,7 +79,7 @@ export default function BookingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F9F9FF] flex flex-col pb-24">
+    <div className="min-h-screen bg-[#F9F9FF] flex flex-col pb-36 sm:pb-24">
       {/* Top Header */}
       <Navbar title="Book Ticket" showBack={false} />
 

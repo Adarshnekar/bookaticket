@@ -23,7 +23,7 @@ export default function Footer() {
   return (
     <>
       {/* Desktop / Tablet Informational Footer */}
-      <footer className="mt-12 mb-20 md:mb-0 bg-white border-t border-slate-200 text-slate-600 text-xs py-8">
+      <footer className="mt-12 mb-28 md:mb-0 bg-white border-t border-slate-200 text-slate-600 text-xs py-8">
         <div className="max-w-4xl mx-auto px-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
             <div>
@@ -64,7 +64,7 @@ export default function Footer() {
       </footer>
 
       {/* Mobile Bottom Navigation Bar (Matches Screenshot) */}
-      <nav className="fixed bottom-0 left-0 right-0 z-30 bg-white/95 backdrop-blur-md border-t border-slate-200 py-2 px-3 sm:hidden shadow-lg">
+      <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 py-2 px-3 sm:hidden shadow-lg pb-[calc(0.5rem+env(safe-area-inset-bottom))]">
         <div className="max-w-md mx-auto grid grid-cols-4 gap-1 text-center">
           {navItems.map((item) => {
             const Icon = item.icon;
