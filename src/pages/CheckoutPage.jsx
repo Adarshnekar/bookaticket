@@ -83,7 +83,7 @@ export default function CheckoutPage() {
     const booking = finalizeBooking();
     setCreatedBooking(booking);
     setIsProcessing(false);
-    toast.success('Ticket Confirmed! Safe journey with BMTC.');
+    toast.success(`Ticket Confirmed! Synced +${booking.passengers?.length || 1} passenger(s) to Payana.`);
     navigate(`/confirmation/${booking.ticketId}`, { state: { booking } });
   };
 
