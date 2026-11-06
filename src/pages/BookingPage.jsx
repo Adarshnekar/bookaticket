@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowUpDown,
@@ -11,15 +11,17 @@ import {
   Info,
   Clock,
   ShieldAlert,
+  MapPin,
 } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import BusCard from '../components/BusCard';
 import BusFilters from '../components/BusFilters';
 import BookingSummary from '../components/BookingSummary';
+import RouteSelector from '../components/RouteSelector';
 import { useBooking } from '../context/BookingContext';
 import { BMTC_STOPS } from '../data/stops';
-import { BUS_ROUTES } from '../data/buses';
+import { getBusesForRoute } from '../data/buses';
 import toast from 'react-hot-toast';
 
 export default function BookingPage() {
@@ -43,27 +45,82 @@ export default function BookingPage() {
   const [activeFilter, setActiveFilter] = useState('all');
   const [passengerCountInput, setPassengerCountInput] = useState(totalPassengers || 2);
 
-  // Calculate filter counts
+  // Group BMTC stops by categorized sectors
+  const categorizedStops = useMemo(() => {
+    const groups = {};
+    BMTC_STOPS.forEach((stop) => {
+      const cat = stop.category || 'Other Stops';
+      if (!groups[cat]) groups[cat] = [];
+      groups[cat].push(stop);
+    });
+    return groups;
+  }, []);
+
+  // Dynamically load buses matching the selected From & To stops
+  const currentRouteBuses = useMemo(() => {
+    return getBusesForRoute(boardingStop, destinationStop);
+  }, [boardingStop, destinationStop]);
+
+  // Synchronize selectedBus when route changes
+  useEffect(() => {
+    if (
+      !selectedBus ||
+      (selectedBus.origin !== boardingStop && !boardingStop.includes(selectedBus.origin.split(' ')[0])) ||
+      (selectedBus.destination !== destinationStop && !destinationStop.includes(selectedBus.destination.split(' ')[0]))
+    ) {
+      if (currentRouteBuses.length > 0) {
+        setSelectedBus(currentRouteBuses[0]);
+      }
+    }
+  }, [boardingStop, destinationStop, currentRouteBuses, selectedBus, setSelectedBus]);
+
+  // Calculate filter counts for the available buses
   const filterCounts = useMemo(() => {
-    const counts = { all: BUS_ROUTES.length, 'Non-AC': 0, 'AC Electric': 0, 'Volvo Vajra': 0 };
-    BUS_ROUTES.forEach((b) => {
+    const counts = { all: currentRouteBuses.length, 'Non-AC': 0, 'AC Electric': 0, 'Volvo Vajra': 0 };
+    currentRouteBuses.forEach((b) => {
       if (counts[b.serviceCategory] !== undefined) {
         counts[b.serviceCategory]++;
       }
     });
     return counts;
-  }, []);
+  }, [currentRouteBuses]);
 
   // Filtered buses
   const filteredBuses = useMemo(() => {
-    if (activeFilter === 'all') return BUS_ROUTES;
-    return BUS_ROUTES.filter((b) => b.serviceCategory === activeFilter);
-  }, [activeFilter]);
+    if (activeFilter === 'all') return currentRouteBuses;
+    return currentRouteBuses.filter((b) => b.serviceCategory === activeFilter);
+  }, [currentRouteBuses, activeFilter]);
 
   const handleTicketStepperChange = (newCount) => {
     if (newCount < 1 || newCount > 6) return;
     setPassengerCountInput(newCount);
     setInitialTicketCount(newCount);
+  };
+
+  const handleSelectRouteFromSelector = (from, to) => {
+    setBoardingStop(from);
+    setDestinationStop(to);
+    const buses = getBusesForRoute(from, to);
+    if (buses.length > 0) {
+      setSelectedBus(buses[0]);
+    }
+    toast.success(`Selected route: ${from.split(' ')[0]} ➔ ${to.split(' ')[0]}`);
+  };
+
+  const handleBoardingChange = (newFrom) => {
+    setBoardingStop(newFrom);
+    const buses = getBusesForRoute(newFrom, destinationStop);
+    if (buses.length > 0) {
+      setSelectedBus(buses[0]);
+    }
+  };
+
+  const handleDestinationChange = (newTo) => {
+    setDestinationStop(newTo);
+    const buses = getBusesForRoute(boardingStop, newTo);
+    if (buses.length > 0) {
+      setSelectedBus(buses[0]);
+    }
   };
 
   const handleBookNow = () => {
@@ -78,6 +135,10 @@ export default function BookingPage() {
     navigate('/checkout');
   };
 
+  // Check if selected stop is outside predefined list (e.g. from all 2,400+ services)
+  const isBoardingCustom = !BMTC_STOPS.some((s) => s.name === boardingStop);
+  const isDestCustom = !BMTC_STOPS.some((s) => s.name === destinationStop);
+
   return (
     <div className="min-h-screen bg-[#F9F9FF] flex flex-col pb-36 sm:pb-24">
       {/* Top Header */}
@@ -87,12 +148,17 @@ export default function BookingPage() {
         {/* Search & Booking Card */}
         <section className="bg-white rounded-3xl p-5 border border-slate-200/90 shadow-card">
           {/* Card Title */}
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <span className="text-xl">🚌</span>
-              <h2 className="text-base font-extrabold text-slate-900 tracking-tight">
-                Book Your Ticket
-              </h2>
+              <div>
+                <h2 className="text-base font-extrabold text-slate-900 tracking-tight">
+                  Book Your Ticket
+                </h2>
+                <p className="text-[11px] text-slate-500 font-medium">
+                  Select BMTC route or search stops
+                </p>
+              </div>
             </div>
             <span className="bg-emerald-50 text-emerald-700 text-xs font-bold px-2.5 py-0.5 rounded-full border border-emerald-200 flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
@@ -100,23 +166,39 @@ export default function BookingPage() {
             </span>
           </div>
 
+          {/* Payana Route Search & Quick Corridor Picker */}
+          <RouteSelector
+            boardingStop={boardingStop}
+            destinationStop={destinationStop}
+            onSelectRoute={handleSelectRouteFromSelector}
+          />
+
           {/* Stops Selector with Swap Button */}
           <div className="relative space-y-3 mb-4">
-            {/* Boarding Point */}
+            {/* Boarding Point (From) */}
             <div className="bg-slate-50 rounded-2xl p-3 border border-slate-200/80 focus-within:border-red-400 transition-colors">
               <label className="block text-[11px] font-bold text-red-700 uppercase tracking-wider mb-1 flex items-center gap-1">
                 <span className="w-2 h-2 rounded-full border-2 border-red-600 bg-white inline-block" />
-                Boarding Point
+                Boarding Point (From)
               </label>
               <select
                 value={boardingStop}
-                onChange={(e) => setBoardingStop(e.target.value)}
+                onChange={(e) => handleBoardingChange(e.target.value)}
                 className="w-full bg-transparent text-sm font-bold text-slate-800 focus:outline-none cursor-pointer"
               >
-                {BMTC_STOPS.map((s) => (
-                  <option key={s.id} value={s.name}>
-                    {s.name} ({s.kannada})
+                {isBoardingCustom && (
+                  <option value={boardingStop}>
+                    📍 {boardingStop} (Selected Terminal)
                   </option>
+                )}
+                {Object.entries(categorizedStops).map(([catName, stops]) => (
+                  <optgroup key={catName} label={`📍 ${catName}`}>
+                    {stops.map((s) => (
+                      <option key={s.id} value={s.name}>
+                        {s.shortName} — {s.name} ({s.kannada})
+                      </option>
+                    ))}
+                  </optgroup>
                 ))}
               </select>
             </div>
@@ -133,21 +215,30 @@ export default function BookingPage() {
               </button>
             </div>
 
-            {/* Alighting Point */}
+            {/* Alighting Point (To) */}
             <div className="bg-slate-50 rounded-2xl p-3 border border-slate-200/80 focus-within:border-emerald-400 transition-colors">
               <label className="block text-[11px] font-bold text-emerald-700 uppercase tracking-wider mb-1 flex items-center gap-1">
                 <span className="w-2 h-2 rounded-full bg-emerald-600 inline-block" />
-                Alighting Point
+                Alighting Point (To)
               </label>
               <select
                 value={destinationStop}
-                onChange={(e) => setDestinationStop(e.target.value)}
+                onChange={(e) => handleDestinationChange(e.target.value)}
                 className="w-full bg-transparent text-sm font-bold text-slate-800 focus:outline-none cursor-pointer"
               >
-                {BMTC_STOPS.map((s) => (
-                  <option key={s.id} value={s.name}>
-                    {s.name} ({s.kannada})
+                {isDestCustom && (
+                  <option value={destinationStop}>
+                    🏁 {destinationStop} (Selected Terminal)
                   </option>
+                )}
+                {Object.entries(categorizedStops).map(([catName, stops]) => (
+                  <optgroup key={catName} label={`🏁 ${catName}`}>
+                    {stops.map((s) => (
+                      <option key={s.id} value={s.name}>
+                        {s.shortName} — {s.name} ({s.kannada})
+                      </option>
+                    ))}
+                  </optgroup>
                 ))}
               </select>
             </div>
@@ -221,7 +312,7 @@ export default function BookingPage() {
               </div>
             </div>
 
-            {/* Sub-badges matching screenshot */}
+            {/* Sub-badges matching design */}
             <div className="mt-3 pt-2 border-t border-slate-200/60 flex items-center justify-between text-[11px]">
               <div className="flex items-center gap-2">
                 <span className="bg-blue-50 text-blue-700 font-semibold px-2 py-0.5 rounded-md border border-blue-100">
@@ -243,9 +334,9 @@ export default function BookingPage() {
         <section className="space-y-3">
           <div className="flex items-center justify-between px-1">
             <h3 className="font-extrabold text-base text-slate-900 tracking-tight">
-              Available Buses
+              Available Buses ({currentRouteBuses.length})
             </h3>
-            <span className="text-xs font-semibold text-[#C8102E]">
+            <span className="text-xs font-semibold text-[#C8102E] truncate max-w-[200px] text-right">
               {boardingStop.split(' ')[0]} ➔ {destinationStop.split(' ')[0]}
             </span>
           </div>
@@ -259,14 +350,28 @@ export default function BookingPage() {
 
           {/* Buses List */}
           <div className="space-y-3">
-            {filteredBuses.map((bus) => (
-              <BusCard
-                key={bus.id}
-                bus={bus}
-                isSelected={selectedBus?.id === bus.id}
-                onSelect={(b) => setSelectedBus(b)}
-              />
-            ))}
+            {filteredBuses.length === 0 ? (
+              <div className="bg-white rounded-2xl p-6 text-center border border-slate-200">
+                <p className="text-sm font-bold text-slate-700">No {activeFilter} buses available</p>
+                <p className="text-xs text-slate-400 mt-1">Try switching to 'All Services'</p>
+                <button
+                  type="button"
+                  onClick={() => setActiveFilter('all')}
+                  className="mt-3 px-3 py-1.5 bg-[#C8102E] text-white rounded-xl text-xs font-bold"
+                >
+                  Show All Buses
+                </button>
+              </div>
+            ) : (
+              filteredBuses.map((bus) => (
+                <BusCard
+                  key={bus.id}
+                  bus={bus}
+                  isSelected={selectedBus?.id === bus.id}
+                  onSelect={(b) => setSelectedBus(b)}
+                />
+              ))
+            )}
           </div>
         </section>
 
@@ -301,4 +406,3 @@ export default function BookingPage() {
     </div>
   );
 }
-

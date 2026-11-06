@@ -75,6 +75,20 @@ export default function BusTracker({ busRoute, boardingStop, destinationStop }) 
     etaMins: 6,
   }));
 
+  // Update bus position when route changes
+  useEffect(() => {
+    if (waypoints && waypoints.length > 0) {
+      const livePoint = waypoints[1] || waypoints[0];
+      setBusPosition({
+        lat: livePoint.lat,
+        lng: livePoint.lng,
+        speed: busRoute?.busCurrentLocation?.speedKm || 28,
+        distanceKm: '1.2',
+        etaMins: busRoute?.etaMinutes || 6,
+      });
+    }
+  }, [busRoute, waypoints]);
+
   // Interval simulation of moving bus slightly along route
   useEffect(() => {
     const timer = setInterval(() => {

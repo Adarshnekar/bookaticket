@@ -1,8 +1,9 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { BUS_ROUTES } from '../data/buses';
+import { BUS_ROUTES, getBusesForRoute } from '../data/buses';
 import { DEFAULT_BOARDING, DEFAULT_DESTINATION } from '../data/stops';
 import { calculateFare } from '../utils/fareCalculator';
 import { generateTicketId, generateSeatAllocations, getFormattedTodayDate } from '../utils/ticketGenerator';
+import { sendTicketToPayana } from '../utils/payanaSync';
 
 const BookingContext = createContext(null);
 
@@ -108,8 +109,26 @@ export function BookingProvider({ children }) {
     setBoardingStop((prevBoarding) => {
       const oldDestination = destinationStop;
       setDestinationStop(prevBoarding);
+      const newBuses = getBusesForRoute(oldDestination, prevBoarding);
+      if (newBuses && newBuses.length > 0) {
+        setSelectedBus(newBuses[0]);
+      }
       return oldDestination;
     });
+  };
+
+  // Select complete route with matching buses
+  const selectRoute = (from, to, bus = null) => {
+    setBoardingStop(from);
+    setDestinationStop(to);
+    if (bus) {
+      setSelectedBus(bus);
+    } else {
+      const available = getBusesForRoute(from, to);
+      if (available && available.length > 0) {
+        setSelectedBus(available[0]);
+      }
+    }
   };
 
   // Adjust passenger list when count of category changes
@@ -219,6 +238,10 @@ export function BookingProvider({ children }) {
       validUntil: 'Valid for 3h remaining',
     };
 
+    // Dispatch live ticket and seat occupancy sync to Payana.si
+    const payanaSync = sendTicketToPayana(newBooking);
+    newBooking.payanaSync = payanaSync;
+
     setActiveBooking(newBooking);
 
     // Save to LocalStorage
@@ -281,6 +304,7 @@ export function BookingProvider({ children }) {
     destinationStop,
     setDestinationStop,
     swapStops,
+    selectRoute,
     travelDate,
     setTravelDate,
     selectedBus,

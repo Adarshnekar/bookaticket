@@ -10,6 +10,9 @@ import {
   AlertCircle,
   Copy,
   Ticket,
+  Radio,
+  Users,
+  ExternalLink,
 } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
@@ -17,6 +20,7 @@ import TicketCard from '../components/TicketCard';
 import BusTracker from '../components/BusTracker';
 import { useBooking } from '../context/BookingContext';
 import { generateTicketPDF } from '../utils/pdfGenerator';
+import { sendTicketToPayana, getRouteOccupancyState } from '../utils/payanaSync';
 import toast from 'react-hot-toast';
 
 export default function ConfirmationPage() {
@@ -134,6 +138,64 @@ export default function ConfirmationPage() {
 
         {/* Digital Ticket Card */}
         <TicketCard booking={booking} />
+
+        {/* Payana Live Real-time Sync Card */}
+        <div className="bg-white rounded-2xl p-4 border border-indigo-100 shadow-xs relative overflow-hidden">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-700 flex items-center justify-center font-bold">
+                <Radio className="w-4 h-4 text-indigo-600 animate-pulse" />
+              </div>
+              <div>
+                <h4 className="text-xs font-black text-slate-900 tracking-tight flex items-center gap-1.5">
+                  Payana.si Real-Time Sync
+                  <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.2 rounded-full border border-emerald-200">
+                    🟢 Dispatched
+                  </span>
+                </h4>
+                <p className="text-[11px] text-slate-500">
+                  Seat occupancy broadcast to Payana Transit Network
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-slate-50 rounded-xl p-2.5 border border-slate-200/80 text-xs space-y-1.5">
+            <div className="flex justify-between items-center">
+              <span className="text-slate-500 font-medium">Route:</span>
+              <span className="font-extrabold text-slate-800 bg-white px-2 py-0.5 rounded border border-slate-200">
+                {booking.busRoute?.busNumber || '335-E'}
+              </span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-slate-500 font-medium">Seats Occupied Added:</span>
+              <span className="font-bold text-emerald-600">
+                +{booking.passengers?.length || 1} Seat{(booking.passengers?.length || 1) > 1 ? 's' : ''} Occupied
+              </span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-slate-500 font-medium">Payana Live Occupancy:</span>
+              <span className="font-bold text-indigo-700">
+                {booking.payanaSync?.newOccupancy || 45}% Occupied
+              </span>
+            </div>
+          </div>
+
+          <div className="mt-2.5 flex items-center justify-between pt-2 border-t border-slate-100 text-[11px]">
+            <span className="text-slate-400">Sync: BroadcastChannel & LocalStorage</span>
+            <button
+              type="button"
+              onClick={() => {
+                sendTicketToPayana(booking);
+                toast.success('Re-broadcast ticket sync to Payana.si!');
+              }}
+              className="font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 cursor-pointer"
+            >
+              <span>Re-send Sync Ping</span>
+              <Radio className="w-3 h-3" />
+            </button>
+          </div>
+        </div>
 
         {/* Live Bus Tracker with React Leaflet Map */}
         <BusTracker
